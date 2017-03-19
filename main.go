@@ -2,8 +2,10 @@ package main
 
 import (
 	"flag"
+	"github.com/fujimisakari/go-chat/trace"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"sync"
 	"text/template"
@@ -29,6 +31,8 @@ func main() {
 
 	// チャットルームを開始します
 	r := newRoom()
+	r.tracer = trace.New(os.Stdout)
+
 	http.Handle("/", &templateHandler{filename: "chat.html"})
 	http.Handle("/room", r)
 	go r.run()

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/fujimisakari/go-chat/trace"
 	"github.com/gorilla/websocket"
 
 	"log"
@@ -12,6 +13,7 @@ type room struct {
 	join    chan *client
 	leave   chan *client
 	clients map[*client]bool
+	tracer  *trace.Tracer
 }
 
 func newRoom() *room {
@@ -29,20 +31,25 @@ func (r *room) run() {
 		case client := <-r.join:
 			// 参加
 			r.clients[client] = true
+			r.tracer.Trace("新しいクライアントが参加しました")
 		case client := <-r.leave:
 			// 退室
 			delete(r.clients, client)
 			close(client.send)
+			r.tracer.Trace("クライアントが退室しました")
 		case msg := <-r.forward:
 			// すべてのクライアントにメッセージを送信
+			r.tracer.Trace("メッセージを受信しました: ", string(msg))
 			for client := range r.clients {
 				select {
 				case client.send <- msg:
-				// メッセージを送信
+					// メッセージを送信
+					r.tracer.Trace(" -- クライアントに送信されました")
 				default:
 					// 送信に失敗
 					delete(r.clients, client)
 					close(client.send)
+					r.tracer.Trace(" -- 送信に失敗しました。クライアントをクリーンアップします")
 				}
 			}
 		}
